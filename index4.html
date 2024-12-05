@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Sample[練習版]</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* 背景が画面全体に収まるように */
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+
+        #content {
+            position: relative;
+            z-index: 1;
+            padding: 20px;
+            color: #444;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #ff6f61;
+            margin-bottom: 20px;
+        }
+
+        #view {
+            padding: 15px;
+            border: 5px solid #ff6f61;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #view>div {
+            padding: 10px;
+            border-bottom: 1px dotted #ffb3a7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #view>div:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="backgroundCanvas"></canvas>
+    <div id="content">
+        <h1><span id="area"></span> 5 DAYS WEATHER</h1>
+        <div id="view"></div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script>
+         const key = "041266bc0c8eb2987fe9d4d129d9ff78";
+            const lat = "35.64255009129907";//35.64255009129907, 139.69075452070967
+            const lon = "139.69075452070967";
+            const icon = "http://openweathermap.org/img/wn/";
+
+            const url = 'https://api.openweathermap.org/data/2.5/forecast?lat=' + lat + '&lon=' + lon + '&appid=' + key + '&lang=ja';
+
+            $.ajax({
+                url: url,
+                type: 'get',
+                cache: false,
+                dataType: 'json'
+            }).done(function (data) {
+                console.log(data);
+
+                let html = "";
+
+                for (let i = 0; i < data.list.length; i++) {
+                    html += `
+                <div>
+                    <div class="date">${data.list[i].dt_txt}</div>
+                    <div class="weather-icon">
+                        <img src="${icon + data.list[i].weather[0].icon}@2x.png" alt="weather icon">
+                        <span class="weather-description">${data.list[i].weather[0].description}</span>
+                    </div>
+                    <div>${data.list[i].wind.speed} m/s</div>
+                </div>
+                `;
+                }
+
+                $("#view").append(html);
+                $("#area").html(data.city.name);
+            }).fail(function (error) {
+                console.error("データ取得に失敗しました:", error);
+
+
+            });
+
+        // === Canvas: 背景アニメーション (四季) ===
+        const canvas = document.getElementById("backgroundCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particles = [];
+        const colors = ["#FFC0CB", "#FFA07A", "#FFD700", "#ADD8E6"]; // 桜色, 夏, 秋, 冬
+
+        class Particle {
+            constructor(x, y, size, color, speedX, speedY) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.color = color;
+                this.speedX = speedX;
+                this.speedY = speedY;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // 画面外に出たら再生成
+                if (this.y > canvas.height || this.x < 0 || this.x > canvas.width) {
+                    this.x = Math.random() * canvas.width;
+                    this.y = 0 - this.size;
+                    this.speedX = (Math.random() - 0.5) * 2;
+                    this.speedY = Math.random() * 3 + 1;
+                }
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < 100; i++) {
+                const size = Math.random() * 5 + 2;
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const speedX = (Math.random() - 0.5) * 2;
+                const speedY = Math.random() * 3 + 1;
+                particles.push(new Particle(x, y, size, color, speedX, speedY));
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((particle) => {
+                particle.update();
+                particle.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        initParticles();
+        animate();
+
+        // ウィンドウリサイズ時にキャンバスを再調整
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initParticles();
+        });
+    </script>
+</body>
+
+</html>
